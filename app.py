@@ -1,6 +1,7 @@
 import yfinance as yf
 import streamlit as st
 import plotly.graph_objects as go
+from datetime import datetime
 
 # Set up Streamlit page configuration
 st.set_page_config(layout="wide", page_title="Compare Stocks", initial_sidebar_state="collapsed")
@@ -28,27 +29,36 @@ tickers = st.multiselect(
     default=["MSFT", "AMZN", "AAPL", "META", "GOOGL"]
 )
 
-# Select time scale
-selected_time_scale = st.radio(
-    "Time Scale",
-    ["1D", "5D", "1M", "3M", "6M", "1Y", "5Y"],
-    horizontal=True
-)
+# Select time scale and custom date range in one row
+col1, col2, col3 = st.columns([3, 4, 4])
+with col1:
+    selected_time_scale = st.radio(
+        "Time Scale",
+        ["1D", "5D", "1M", "3M", "6M", "1Y", "5Y", "Custom"],
+        horizontal=True
+    )
+with col2:
+    if selected_time_scale == "Custom":
+        start_date = st.date_input("Start Date", value=datetime(2020, 1, 1))
+with col3:
+    if selected_time_scale == "Custom":
+        end_date = st.date_input("End Date", value=datetime.now())
+
+# Map the selected time scale to yfinance periods
+if selected_time_scale != "Custom":
+    time_scale_map = {
+        "1D": "1d",
+        "5D": "5d",
+        "1M": "1mo",
+        "3M": "3mo",
+        "6M": "6mo",
+        "1Y": "1y",
+        "5Y": "5y"
+    }
+    selected_period = time_scale_map[selected_time_scale]
 
 # Adjust chart height
 chart_height = 500 if is_mobile else 950
-
-# Map the selected time scale to yfinance periods
-time_scale_map = {
-    "1D": "1d",
-    "5D": "5d",
-    "1M": "1mo",
-    "3M": "3mo",
-    "6M": "6mo",
-    "1Y": "1y",
-    "5Y": "5y"
-}
-selected_period = time_scale_map[selected_time_scale]
 
 # Create tabs for Price, Percentage Change, and Portfolio
 tab1, tab2, tab3 = st.tabs(["Price", "Percentage Change", "Portfolio"])
@@ -59,7 +69,12 @@ with tab1:
 
     for ticker in tickers:
         try:
-            stock_data = yf.Ticker(ticker).history(period=selected_period)
+            # Fetch data using either custom date range or predefined period
+            if selected_time_scale == "Custom":
+                stock_data = yf.Ticker(ticker).history(start=start_date, end=end_date)
+            else:
+                stock_data = yf.Ticker(ticker).history(period=selected_period)
+
             price_fig.add_trace(go.Scatter(
                 x=stock_data.index,
                 y=stock_data['Close'],
@@ -82,6 +97,7 @@ with tab1:
         margin=dict(l=20, r=20, t=50, b=20),
         legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center")
     )
+    
     st.plotly_chart(price_fig, use_container_width=True)
 
 # Percentage Change Tab
@@ -90,7 +106,12 @@ with tab2:
 
     for ticker in tickers:
         try:
-            stock_data = yf.Ticker(ticker).history(period=selected_period)
+            # Fetch data using either custom date range or predefined period
+            if selected_time_scale == "Custom":
+                stock_data = yf.Ticker(ticker).history(start=start_date, end=end_date)
+            else:
+                stock_data = yf.Ticker(ticker).history(period=selected_period)
+
             stock_data['Percentage Change'] = (
                 (stock_data['Close'] - stock_data['Close'].iloc[0]) / stock_data['Close'].iloc[0]
             ) * 100
@@ -116,6 +137,7 @@ with tab2:
         margin=dict(l=20, r=20, t=50, b=20),
         legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center")
     )
+
     st.plotly_chart(pct_change_fig, use_container_width=True)
 
 # Portfolio Tab
@@ -135,7 +157,7 @@ with tab3:
         submitted = st.form_submit_button("Add to Portfolio")
         if submitted:
             st.session_state.portfolio.append({"Ticker": ticker, "Shares": shares, "Avg Cost": avg_cost})
-            # st.success(f"Added {shares} shares of {ticker} at ${avg_cost:.2f} each.")
+            # st.success(f"Added {shares} shares of {ticker} at ${avg_cost:.2f} each.")  # Optional
 
     st.markdown("### Current Portfolio")
     
@@ -152,10 +174,6 @@ with tab3:
                 st.write("Average Cost (USD)")
             with col7:
                 st.write("Equity (USD)")
-        with col2:
-            st.write()
-        with col3:
-            st.write()
 
         for idx, stock in enumerate(st.session_state.portfolio):
             col1, col2, col3 = st.columns([10, 1, 1])
@@ -168,36 +186,21 @@ with tab3:
                 with col6:
                     st.write(str(stock["Avg Cost"]))
                 with col7:
-                    ticker_symbol = stock["Ticker"]
-                    ticker = yf.Ticker(ticker_symbol)
-                    latest_data = ticker.history(period="1d")  # Fetch data for the last trading day
-                    latest_close = latest_data["Close"].iloc[-1]  # Get the latest close price
-                    st.write(str(f"{latest_close * stock["Shares"]:.2f}"))
-            # if col2.button("Edit", key=f"edit-{idx}"):
-            #     with st.form(f"edit_form_{idx}"):
-            #         col1, col2 = st.columns([1, 1])
-            #         with col1:
-            #             new_shares = st.number_input(
-            #                 "Edit Number of Shares", min_value=0.0, step=0.01, value=stock["Shares"]
-            #             )
-            #         with col2:
-            #             new_avg_cost = st.number_input(
-            #                 "Edit Average Cost per Share", min_value=0.0, step=0.01, value=stock["Avg Cost"]
-            #             )
-            #         submit_edit = st.form_submit_button("Save Changes")
-            #         if submit_edit:
-            #             st.session_state.portfolio[idx]["Shares"] = new_shares
-            #             st.session_state.portfolio[idx]["Avg Cost"] = new_avg_cost
-            #             # st.success(f"Updated {stock['Ticker']}!")
-            #             st.rerun()
+                    try:
+                        ticker_symbol = stock["Ticker"]
+                        ticker = yf.Ticker(ticker_symbol)
+                        latest_data = ticker.history(period="1d")  # Fetch data for the last trading day
+                        latest_close = latest_data["Close"].iloc[-1]  # Get the latest close price
+                        st.write(str(f"{latest_close * stock['Shares']:.2f}"))
+                    except Exception as e:
+                        st.error(f"Error fetching data for {ticker_symbol}: {e}")
+
             if col3.button("Delete", key=f"delete-{idx}"):
                 st.session_state.portfolio.pop(idx)
-                # st.success(f"Deleted {stock['Ticker']}!")
                 st.rerun()
 
     # Calculate and plot portfolio and selected tickers percentage change
     if st.session_state.portfolio or tickers:
-        # st.markdown("### Portfolio and Selected Tickers Percentage Change Over Time")
         portfolio_fig = go.Figure()
 
         total_initial_value = 0
@@ -206,8 +209,11 @@ with tab3:
         # Plot portfolio percentage change
         for stock in st.session_state.portfolio:
             try:
-                # Fetch stock data
-                stock_data = yf.Ticker(stock["Ticker"]).history(period=selected_period)
+                # Fetch stock data based on the selected time scale
+                if selected_time_scale == "Custom":
+                    stock_data = yf.Ticker(stock["Ticker"]).history(start=start_date, end=end_date)
+                else:
+                    stock_data = yf.Ticker(stock["Ticker"]).history(period=selected_period)
 
                 # Calculate the initial value of this stock
                 initial_value = stock["Shares"] * stock_data["Close"].iloc[0]
@@ -246,7 +252,11 @@ with tab3:
         # Plot selected tickers' percentage changes
         for ticker in tickers:
             try:
-                stock_data = yf.Ticker(ticker).history(period=selected_period)
+                # Fetch stock data based on the selected time scale
+                if selected_time_scale == "Custom":
+                    stock_data = yf.Ticker(ticker).history(start=start_date, end=end_date)
+                else:
+                    stock_data = yf.Ticker(ticker).history(period=selected_period)
 
                 # Calculate percentage change for the ticker
                 stock_data["Percentage Change"] = (
@@ -277,4 +287,5 @@ with tab3:
             margin=dict(l=20, r=20, t=50, b=20),
             legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center")
         )
-        st.plotly_chart(portfolio_fig, use_container_width=True, key="portfolio_chart")
+
+    st.plotly_chart(portfolio_fig, use_container_width=True, key="portfolio_chart")
