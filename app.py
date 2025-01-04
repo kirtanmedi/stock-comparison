@@ -3,7 +3,7 @@ import streamlit as st
 import plotly.graph_objects as go
 
 # Set up Streamlit page configuration
-st.set_page_config(layout="wide", page_title="Stock Data Viewer", initial_sidebar_state="collapsed")
+st.set_page_config(layout="wide", page_title="Compare Stocks", initial_sidebar_state="collapsed")
 
 # Manual toggle for testing mobile view
 is_mobile = st.sidebar.checkbox("Switch to Mobile View", value=False)
@@ -15,7 +15,7 @@ with open("utils/tickers.txt", "r") as file:
         all_tickers.append(ticker.strip())
 
 # App title
-st.title("Stock Data Viewer")
+st.title("Are You Beating The Market 🤔")
 
 # Initialize portfolio in session state
 if "portfolio" not in st.session_state:
@@ -138,9 +138,25 @@ with tab3:
             # st.success(f"Added {shares} shares of {ticker} at ${avg_cost:.2f} each.")
 
     st.markdown("### Current Portfolio")
-
+    
     # Edit/Delete Portfolio Entries
     if st.session_state.portfolio:
+        col1, col2, col3 = st.columns([10, 1, 1])
+        with col1:
+            col4, col5, col6, col7 = st.columns([1, 1, 1, 1])
+            with col4:
+                st.write("Ticker")
+            with col5:
+                st.write("Number of Shares")
+            with col6:
+                st.write("Average Cost (USD)")
+            with col7:
+                st.write("Equity (USD)")
+        with col2:
+            st.write()
+        with col3:
+            st.write()
+
         for idx, stock in enumerate(st.session_state.portfolio):
             col1, col2, col3 = st.columns([10, 1, 1])
             with col1:
