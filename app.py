@@ -97,7 +97,7 @@ with tab1:
         margin=dict(l=20, r=20, t=50, b=20),
         legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center")
     )
-    
+
     st.plotly_chart(price_fig, use_container_width=True)
 
 # Percentage Change Tab
@@ -288,4 +288,4 @@ with tab3:
             legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center")
         )
 
-    st.plotly_chart(portfolio_fig, use_container_width=True, key="portfolio_chart")
+        st.plotly_chart(portfolio_fig, use_container_width=True, key="portfolio_chart")
