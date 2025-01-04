@@ -166,36 +166,66 @@ with tab3:
                     if submit_edit:
                         st.session_state.portfolio[idx]["Shares"] = new_shares
                         st.session_state.portfolio[idx]["Avg Cost"] = new_avg_cost
-                        st.success(f"Updated {stock['Ticker']}!")
+                        # st.success(f"Updated {stock['Ticker']}!")
                         st.rerun()
             if col3.button("Delete", key=f"delete-{idx}"):
                 st.session_state.portfolio.pop(idx)
                 # st.success(f"Deleted {stock['Ticker']}!")
                 st.rerun()
 
-    # Calculate and plot portfolio value
+    # Calculate and plot portfolio percentage change over the selected time frame
     if st.session_state.portfolio:
-        st.markdown("### Portfolio Value Over Time")
+        st.markdown("### Portfolio Percentage Change Over Time")
         portfolio_fig = go.Figure()
+
+        total_initial_value = 0
+        weighted_pct_changes = None
+
         for stock in st.session_state.portfolio:
             try:
+                # Fetch stock data
                 stock_data = yf.Ticker(stock["Ticker"]).history(period=selected_period)
-                stock_data["Value"] = stock["Shares"] * stock_data["Close"]
-                portfolio_fig.add_trace(go.Scatter(
-                    x=stock_data.index,
-                    y=stock_data["Value"],
-                    mode='lines',
-                    name=f"{stock['Ticker']} Value",
-                    line=dict(width=2)
-                ))
+
+                # Calculate the initial value of this stock
+                initial_value = stock["Shares"] * stock_data["Close"].iloc[0]
+                total_initial_value += initial_value
+
+                # Calculate percentage change for the stock
+                stock_data["Percentage Change"] = (
+                    (stock_data["Close"] - stock_data["Close"].iloc[0]) / stock_data["Close"].iloc[0]
+                ) * 100
+
+                # Weighted percentage change for this stock
+                stock_weighted_pct = stock_data["Percentage Change"] * initial_value
+
+                # Aggregate weighted percentage changes
+                if weighted_pct_changes is None:
+                    weighted_pct_changes = stock_weighted_pct
+                else:
+                    weighted_pct_changes += stock_weighted_pct
+
             except Exception as e:
                 st.error(f"Error fetching data for {stock['Ticker']}: {e}")
 
+        if weighted_pct_changes is not None:
+            # Normalize by total initial value to get the portfolio's percentage change
+            portfolio_percentage_change = weighted_pct_changes / total_initial_value
+
+            # Plot the portfolio percentage change
+            portfolio_fig.add_trace(go.Scatter(
+                x=stock_data.index,
+                y=portfolio_percentage_change,
+                mode='lines',
+                name="Portfolio (% Change)",
+                line=dict(width=2, color='blue')
+            ))
+
+        # Customize the plot
         portfolio_fig.update_layout(
             autosize=True,
             height=chart_height,
             xaxis_title="Date",
-            yaxis_title="Portfolio Value (USD)",
+            yaxis_title="Portfolio Percentage Change (%)",
             template="plotly_white",
             xaxis=dict(showgrid=True),
             yaxis=dict(showgrid=True),
