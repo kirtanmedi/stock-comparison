@@ -15,7 +15,7 @@ with open("utils/tickers.txt", "r") as file:
         all_tickers.append(ticker.strip())
 
 # App title
-st.title("Stock Data: Toggle Between Price and Percentage Change")
+st.title("Stock Data Viewer")
 
 # Select tickers
 tickers = st.multiselect(
@@ -24,22 +24,16 @@ tickers = st.multiselect(
     default=["MSFT", "AMZN", "AAPL", "META", "GOOGL"]
 )
 
-# Add vertical stack for Chart Type and Time Scale, but align options horizontally
-st.markdown("### Chart Options")
-chart_type = st.radio(
-    "Select Chart Type",
-    options=["Price", "Percentage Change"],
-    horizontal=True  # Options aligned horizontally
-)
-
+# Select time scale
+# st.markdown("### Time Scale")
 selected_time_scale = st.radio(
-    "Select Time Scale",
+    "Time Scale",
     ["1D", "5D", "1M", "3M", "6M", "1Y", "5Y"],
-    horizontal=True  # Options aligned horizontally
+    horizontal=True
 )
 
-# Adjust chart height (slightly shorter)
-chart_height = 500 if is_mobile else 850
+# Adjust chart height (slightly shorter for mobile)
+chart_height = 500 if is_mobile else 950
 
 # Map the selected time scale to yfinance periods
 time_scale_map = {
@@ -53,32 +47,68 @@ time_scale_map = {
 }
 selected_period = time_scale_map[selected_time_scale]
 
-# Create a Plotly figure
-chart_fig = go.Figure()
+# Create tabs for Price and Percentage Change
+tab1, tab2 = st.tabs(["Price", "Percentage Change"])
 
-# Fetch and plot data for each selected ticker
-for ticker in tickers:
-    try:
-        # Fetch stock data
-        stock_data = yf.Ticker(ticker).history(period=selected_period)
+with tab1:
+    # Create a Plotly figure for Price
+    price_fig = go.Figure()
 
-        if chart_type == "Price":
+    for ticker in tickers:
+        try:
+            # Fetch stock data
+            stock_data = yf.Ticker(ticker).history(period=selected_period)
+
             # Plot price data
-            chart_fig.add_trace(go.Scatter(
+            price_fig.add_trace(go.Scatter(
                 x=stock_data.index,
                 y=stock_data['Close'],
                 mode='lines',
                 name=f"{ticker} (Price)",
                 line=dict(width=2)
             ))
-        elif chart_type == "Percentage Change":
+
+        except Exception as e:
+            st.error(f"Error fetching data for {ticker}: {e}")
+
+    # Customize the price chart layout
+    price_fig.update_layout(
+        autosize=True,
+        height=chart_height,
+        xaxis_title="Date",
+        yaxis_title="Close Price (USD)",
+        template="plotly_white",
+        xaxis=dict(showgrid=True),
+        yaxis=dict(showgrid=True),
+        hovermode="x unified",
+        margin=dict(l=20, r=20, t=50, b=20),
+        legend=dict(
+            orientation="h",
+            y=1.15,
+            x=0.5,
+            xanchor="center"
+        )
+    )
+
+    # Display the Price chart
+    st.plotly_chart(price_fig, use_container_width=True)
+
+with tab2:
+    # Create a Plotly figure for Percentage Change
+    pct_change_fig = go.Figure()
+
+    for ticker in tickers:
+        try:
+            # Fetch stock data
+            stock_data = yf.Ticker(ticker).history(period=selected_period)
+
             # Calculate percentage change since the start of the period
             stock_data['Percentage Change'] = (
                 (stock_data['Close'] - stock_data['Close'].iloc[0]) / stock_data['Close'].iloc[0]
             ) * 100
 
             # Plot percentage change data
-            chart_fig.add_trace(go.Scatter(
+            pct_change_fig.add_trace(go.Scatter(
                 x=stock_data.index,
                 y=stock_data['Percentage Change'],
                 mode='lines',
@@ -86,31 +116,27 @@ for ticker in tickers:
                 line=dict(width=2)
             ))
 
-    except Exception as e:
-        st.error(f"Error fetching data for {ticker}: {e}")
+        except Exception as e:
+            st.error(f"Error fetching data for {ticker}: {e}")
 
-# Customize the chart layout
-yaxis_title = "Close Price (USD)" if chart_type == "Price" else "Percentage Change (%)"
-
-# Set legend position to always be horizontal above the chart
-chart_fig.update_layout(
-    autosize=True,  # Enable responsive sizing
-    height=chart_height,  # Adjust height dynamically
-    # title=f"{chart_type} Comparison - {', '.join(tickers)}",
-    xaxis_title="Date",
-    yaxis_title=yaxis_title,
-    template="plotly_white",
-    xaxis=dict(showgrid=True),
-    yaxis=dict(showgrid=True),
-    hovermode="x unified",
-    margin=dict(l=20, r=20, t=50, b=20),
-    legend=dict(
-        orientation="h",  # Horizontal legend
-        y=1.15,           # Position above the chart
-        x=0.5,            # Center align
-        xanchor="center"
+    # Customize the percentage change chart layout
+    pct_change_fig.update_layout(
+        autosize=True,
+        height=chart_height,
+        xaxis_title="Date",
+        yaxis_title="Percentage Change (%)",
+        template="plotly_white",
+        xaxis=dict(showgrid=True),
+        yaxis=dict(showgrid=True),
+        hovermode="x unified",
+        margin=dict(l=20, r=20, t=50, b=20),
+        legend=dict(
+            orientation="h",
+            y=1.15,
+            x=0.5,
+            xanchor="center"
+        )
     )
-)
 
-# Display the chart
-st.plotly_chart(chart_fig, use_container_width=True)
+    # Display the Percentage Change chart
+    st.plotly_chart(pct_change_fig, use_container_width=True)
