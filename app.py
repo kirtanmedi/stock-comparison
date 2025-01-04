@@ -61,7 +61,7 @@ if selected_time_scale != "Custom":
 chart_height = 500 if is_mobile else 950
 
 # Create tabs for Price, Percentage Change, and Portfolio
-tab1, tab2, tab3 = st.tabs(["Price", "Percentage Change", "Portfolio"])
+tab1, tab2, tab3, tab4 = st.tabs(["Price", "Percentage Change", "Portfolio", "Simulate"])
 
 # Price Tab
 with tab1:
@@ -289,3 +289,90 @@ with tab3:
         )
 
         st.plotly_chart(portfolio_fig, use_container_width=True, key="portfolio_chart")
+
+with tab4:
+    st.subheader("Simulate your growth")
+
+    with st.form("simulate_form"):
+        # Horizontal alignment using columns
+        col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+        with col1:
+            initial_investment = st.number_input("Initial Investment", min_value=0.0, step=0.01)
+        with col2:
+            monthly_contribution = st.number_input("Monthly Contribution", min_value=0.0, step=0.01)
+        with col3:
+            years = st.number_input("Length of Time in Years", min_value=0, step=1)
+        with col4:
+            int_rate = st.number_input("Estimated Interest Rate (%)", min_value=0.0, step=0.1)
+        submitted = st.form_submit_button("Simulate")
+
+    if submitted:
+        # Constants
+        annual_rate = int_rate / 100  # Convert annual interest rate to decimal
+        annual_contribution = monthly_contribution * 12  # Convert monthly contribution to annual contribution
+
+        # Initialize variables
+        current_value = initial_investment
+        investment_value = [initial_investment]  # Track value at each year
+        total_contributions_over_time = [initial_investment]  # Track total contributions
+
+        # Calculate growth year by year
+        for year in range(1, years + 1):
+            # Apply annual compounding to the total
+            current_value *= (1 + annual_rate)
+
+            # Add the amortized annual contribution
+            current_value += annual_contribution
+
+            # Track the investment value at the end of the year
+            investment_value.append(current_value)
+
+            # Update total contributions
+            total_contributions = initial_investment + (annual_contribution * year)
+            total_contributions_over_time.append(total_contributions)
+
+        # Calculate total contributions
+        total_contributions = initial_investment + (annual_contribution * years)
+
+        # Display results
+        st.markdown("### Investment Growth Over Time")
+        st.write(f"**Total Contributions:** ${total_contributions:,.2f}")
+        st.write(f"**Estimated Final Value:** ${current_value:,.2f}")
+
+        # Plot results
+        simulate_fig = go.Figure()
+
+        # Add the investment value line
+        simulate_fig.add_trace(go.Scatter(
+            x=list(range(0, years + 1)),  # Including year 0 (initial investment)
+            y=investment_value,
+            mode='lines',
+            name="Investment Value",
+            line=dict(width=2, color="green")
+        ))
+
+        # Add the total contributions line
+        simulate_fig.add_trace(go.Scatter(
+            x=list(range(0, years + 1)),
+            y=total_contributions_over_time,
+            mode='lines',
+            name="Total Contributions",
+            line=dict(width=2, color="orange", dash="dash")  # Dashed line for distinction
+        ))
+
+        # Customize layout
+        simulate_fig.update_layout(
+            autosize=True,
+            height=chart_height,
+            xaxis_title="Years",
+            yaxis_title="Value (USD)",
+            template="plotly_white",
+            xaxis=dict(showgrid=True),
+            yaxis=dict(showgrid=True),
+            hovermode="x unified",
+            margin=dict(l=20, r=20, t=50, b=20),
+            legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center")
+        )
+
+        # Display the chart
+        st.plotly_chart(simulate_fig, use_container_width=True, key="simulate_chart")
