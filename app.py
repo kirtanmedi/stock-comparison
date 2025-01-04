@@ -39,7 +39,7 @@ selected_time_scale = st.radio(
 )
 
 # Adjust chart height (slightly shorter)
-chart_height = 600 if is_mobile else 850
+chart_height = 500 if is_mobile else 850
 
 # Map the selected time scale to yfinance periods
 time_scale_map = {
