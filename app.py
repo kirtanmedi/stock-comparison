@@ -17,7 +17,7 @@ st.title("Stock Data: Toggle Between Price and Percentage Change")
 # Function to detect container width
 def is_mobile():
     """Approximation: Treat small containers as mobile."""
-    return st.experimental_get_query_params().get("_xsrf") is not None
+    return st.query_params().get("_xsrf") is not None
 
 # Adjust layout for mobile vs. desktop
 if is_mobile():
