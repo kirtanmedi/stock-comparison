@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 
 st.set_page_config(layout="wide")
 
-# Load all tickers (replace this with an actual list or data source)
+# Load all tickers
 all_tickers = []
 
 with open("utils/tickers.txt", "r") as file:
