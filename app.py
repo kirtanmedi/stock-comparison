@@ -7,7 +7,7 @@ st.set_page_config(layout="wide")
 # Load all tickers (replace this with an actual list or data source)
 all_tickers = []
 
-with open("util/tickers.txt", "r") as file:
+with open("utils/tickers.txt", "r") as file:
     for ticker in file:
         all_tickers.append(ticker.strip())
 
