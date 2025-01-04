@@ -144,43 +144,50 @@ with tab3:
         for idx, stock in enumerate(st.session_state.portfolio):
             col1, col2, col3 = st.columns([10, 1, 1])
             with col1:
-                col4, col5, col6 = st.columns([1, 1, 1])
+                col4, col5, col6, col7 = st.columns([1, 1, 1, 1])
                 with col4:
                     st.write(stock["Ticker"])
-                with col5: 
+                with col5:
                     st.write(str(stock["Shares"]))
                 with col6:
                     st.write(str(stock["Avg Cost"]))
-            if col2.button("Edit", key=f"edit-{idx}"):
-                with st.form(f"edit_form_{idx}"):
-                    col1, col2 = st.columns([1, 1])
-                    with col1:
-                        new_shares = st.number_input(
-                            "Edit Number of Shares", min_value=0.0, step=0.01, value=stock["Shares"]
-                        )
-                    with col2:
-                        new_avg_cost = st.number_input(
-                            "Edit Average Cost per Share", min_value=0.0, step=0.01, value=stock["Avg Cost"]
-                        )
-                    submit_edit = st.form_submit_button("Save Changes")
-                    if submit_edit:
-                        st.session_state.portfolio[idx]["Shares"] = new_shares
-                        st.session_state.portfolio[idx]["Avg Cost"] = new_avg_cost
-                        # st.success(f"Updated {stock['Ticker']}!")
-                        st.rerun()
+                with col7:
+                    ticker_symbol = stock["Ticker"]
+                    ticker = yf.Ticker(ticker_symbol)
+                    latest_data = ticker.history(period="1d")  # Fetch data for the last trading day
+                    latest_close = latest_data["Close"].iloc[-1]  # Get the latest close price
+                    st.write(str(f"{latest_close * stock["Shares"]:.2f}"))
+            # if col2.button("Edit", key=f"edit-{idx}"):
+            #     with st.form(f"edit_form_{idx}"):
+            #         col1, col2 = st.columns([1, 1])
+            #         with col1:
+            #             new_shares = st.number_input(
+            #                 "Edit Number of Shares", min_value=0.0, step=0.01, value=stock["Shares"]
+            #             )
+            #         with col2:
+            #             new_avg_cost = st.number_input(
+            #                 "Edit Average Cost per Share", min_value=0.0, step=0.01, value=stock["Avg Cost"]
+            #             )
+            #         submit_edit = st.form_submit_button("Save Changes")
+            #         if submit_edit:
+            #             st.session_state.portfolio[idx]["Shares"] = new_shares
+            #             st.session_state.portfolio[idx]["Avg Cost"] = new_avg_cost
+            #             # st.success(f"Updated {stock['Ticker']}!")
+            #             st.rerun()
             if col3.button("Delete", key=f"delete-{idx}"):
                 st.session_state.portfolio.pop(idx)
                 # st.success(f"Deleted {stock['Ticker']}!")
                 st.rerun()
 
-    # Calculate and plot portfolio percentage change over the selected time frame
-    if st.session_state.portfolio:
-        st.markdown("### Portfolio Percentage Change Over Time")
+    # Calculate and plot portfolio and selected tickers percentage change
+    if st.session_state.portfolio or tickers:
+        # st.markdown("### Portfolio and Selected Tickers Percentage Change Over Time")
         portfolio_fig = go.Figure()
 
         total_initial_value = 0
         weighted_pct_changes = None
 
+        # Plot portfolio percentage change
         for stock in st.session_state.portfolio:
             try:
                 # Fetch stock data
@@ -220,12 +227,33 @@ with tab3:
                 line=dict(width=2, color='blue')
             ))
 
+        # Plot selected tickers' percentage changes
+        for ticker in tickers:
+            try:
+                stock_data = yf.Ticker(ticker).history(period=selected_period)
+
+                # Calculate percentage change for the ticker
+                stock_data["Percentage Change"] = (
+                    (stock_data["Close"] - stock_data["Close"].iloc[0]) / stock_data["Close"].iloc[0]
+                ) * 100
+
+                # Plot the ticker's percentage change
+                portfolio_fig.add_trace(go.Scatter(
+                    x=stock_data.index,
+                    y=stock_data["Percentage Change"],
+                    mode='lines',
+                    name=f"{ticker} (% Change)",
+                    line=dict(width=2)
+                ))
+            except Exception as e:
+                st.error(f"Error fetching data for {ticker}: {e}")
+
         # Customize the plot
         portfolio_fig.update_layout(
             autosize=True,
             height=chart_height,
             xaxis_title="Date",
-            yaxis_title="Portfolio Percentage Change (%)",
+            yaxis_title="Percentage Change (%)",
             template="plotly_white",
             xaxis=dict(showgrid=True),
             yaxis=dict(showgrid=True),
