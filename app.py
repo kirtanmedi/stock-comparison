@@ -277,4 +277,4 @@ with tab3:
             margin=dict(l=20, r=20, t=50, b=20),
             legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center")
         )
-        st.plotly_chart(portfolio_fig, use_container_width=True)
+        st.plotly_chart(portfolio_fig, use_container_width=True, key="portfolio_chart")
