@@ -91,17 +91,25 @@ for ticker in tickers:
 
 # Customize the chart layout
 yaxis_title = "Close Price (USD)" if chart_type == "Price" else "Percentage Change (%)"
+
+# Set legend position to always be horizontal above the chart
 chart_fig.update_layout(
     autosize=True,  # Enable responsive sizing
     height=chart_height,  # Adjust height dynamically
-    title=f"{chart_type} Comparison - {', '.join(tickers)}",
+    # title=f"{chart_type} Comparison - {', '.join(tickers)}",
     xaxis_title="Date",
     yaxis_title=yaxis_title,
     template="plotly_white",
     xaxis=dict(showgrid=True),
     yaxis=dict(showgrid=True),
     hovermode="x unified",
-    margin=dict(l=20, r=20, t=50, b=20)
+    margin=dict(l=20, r=20, t=50, b=20),
+    legend=dict(
+        orientation="h",  # Horizontal legend
+        y=1.15,           # Position above the chart
+        x=0.5,            # Center align
+        xanchor="center"
+    )
 )
 
 # Display the chart
