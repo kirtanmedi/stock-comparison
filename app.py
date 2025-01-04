@@ -17,6 +17,10 @@ with open("utils/tickers.txt", "r") as file:
 # App title
 st.title("Stock Data Viewer")
 
+# Initialize portfolio in session state
+if "portfolio" not in st.session_state:
+    st.session_state.portfolio = []
+
 # Select tickers
 tickers = st.multiselect(
     "Select Tickers to Compare",
@@ -25,14 +29,13 @@ tickers = st.multiselect(
 )
 
 # Select time scale
-# st.markdown("### Time Scale")
 selected_time_scale = st.radio(
     "Time Scale",
     ["1D", "5D", "1M", "3M", "6M", "1Y", "5Y"],
     horizontal=True
 )
 
-# Adjust chart height (slightly shorter for mobile)
+# Adjust chart height
 chart_height = 500 if is_mobile else 950
 
 # Map the selected time scale to yfinance periods
@@ -47,19 +50,16 @@ time_scale_map = {
 }
 selected_period = time_scale_map[selected_time_scale]
 
-# Create tabs for Price and Percentage Change
-tab1, tab2 = st.tabs(["Price", "Percentage Change"])
+# Create tabs for Price, Percentage Change, and Portfolio
+tab1, tab2, tab3 = st.tabs(["Price", "Percentage Change", "Portfolio"])
 
+# Price Tab
 with tab1:
-    # Create a Plotly figure for Price
     price_fig = go.Figure()
 
     for ticker in tickers:
         try:
-            # Fetch stock data
             stock_data = yf.Ticker(ticker).history(period=selected_period)
-
-            # Plot price data
             price_fig.add_trace(go.Scatter(
                 x=stock_data.index,
                 y=stock_data['Close'],
@@ -67,11 +67,9 @@ with tab1:
                 name=f"{ticker} (Price)",
                 line=dict(width=2)
             ))
-
         except Exception as e:
             st.error(f"Error fetching data for {ticker}: {e}")
 
-    # Customize the price chart layout
     price_fig.update_layout(
         autosize=True,
         height=chart_height,
@@ -82,32 +80,20 @@ with tab1:
         yaxis=dict(showgrid=True),
         hovermode="x unified",
         margin=dict(l=20, r=20, t=50, b=20),
-        legend=dict(
-            orientation="h",
-            y=1.15,
-            x=0.5,
-            xanchor="center"
-        )
+        legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center")
     )
-
-    # Display the Price chart
     st.plotly_chart(price_fig, use_container_width=True)
 
+# Percentage Change Tab
 with tab2:
-    # Create a Plotly figure for Percentage Change
     pct_change_fig = go.Figure()
 
     for ticker in tickers:
         try:
-            # Fetch stock data
             stock_data = yf.Ticker(ticker).history(period=selected_period)
-
-            # Calculate percentage change since the start of the period
             stock_data['Percentage Change'] = (
                 (stock_data['Close'] - stock_data['Close'].iloc[0]) / stock_data['Close'].iloc[0]
             ) * 100
-
-            # Plot percentage change data
             pct_change_fig.add_trace(go.Scatter(
                 x=stock_data.index,
                 y=stock_data['Percentage Change'],
@@ -115,11 +101,9 @@ with tab2:
                 name=f"{ticker} (% Change)",
                 line=dict(width=2)
             ))
-
         except Exception as e:
             st.error(f"Error fetching data for {ticker}: {e}")
 
-    # Customize the percentage change chart layout
     pct_change_fig.update_layout(
         autosize=True,
         height=chart_height,
@@ -130,13 +114,93 @@ with tab2:
         yaxis=dict(showgrid=True),
         hovermode="x unified",
         margin=dict(l=20, r=20, t=50, b=20),
-        legend=dict(
-            orientation="h",
-            y=1.15,
-            x=0.5,
-            xanchor="center"
-        )
+        legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center")
     )
-
-    # Display the Percentage Change chart
     st.plotly_chart(pct_change_fig, use_container_width=True)
+
+# Portfolio Tab
+with tab3:
+    st.subheader("Manage Your Portfolio")
+
+    # Add to portfolio form
+    with st.form("portfolio_form"):
+        # Horizontal alignment using columns
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col1:
+            ticker = st.selectbox("Select Ticker", all_tickers)
+        with col2:
+            shares = st.number_input("Number of Shares", min_value=0.0, step=0.01)
+        with col3:
+            avg_cost = st.number_input("Average Cost per Share (USD)", min_value=0.0, step=0.01)
+        submitted = st.form_submit_button("Add to Portfolio")
+        if submitted:
+            st.session_state.portfolio.append({"Ticker": ticker, "Shares": shares, "Avg Cost": avg_cost})
+            # st.success(f"Added {shares} shares of {ticker} at ${avg_cost:.2f} each.")
+
+    st.markdown("### Current Portfolio")
+
+    # Edit/Delete Portfolio Entries
+    if st.session_state.portfolio:
+        for idx, stock in enumerate(st.session_state.portfolio):
+            col1, col2, col3 = st.columns([10, 1, 1])
+            with col1:
+                col4, col5, col6 = st.columns([1, 1, 1])
+                with col4:
+                    st.write(stock["Ticker"])
+                with col5: 
+                    st.write(str(stock["Shares"]))
+                with col6:
+                    st.write(str(stock["Avg Cost"]))
+            if col2.button("Edit", key=f"edit-{idx}"):
+                with st.form(f"edit_form_{idx}"):
+                    col1, col2 = st.columns([1, 1])
+                    with col1:
+                        new_shares = st.number_input(
+                            "Edit Number of Shares", min_value=0.0, step=0.01, value=stock["Shares"]
+                        )
+                    with col2:
+                        new_avg_cost = st.number_input(
+                            "Edit Average Cost per Share", min_value=0.0, step=0.01, value=stock["Avg Cost"]
+                        )
+                    submit_edit = st.form_submit_button("Save Changes")
+                    if submit_edit:
+                        st.session_state.portfolio[idx]["Shares"] = new_shares
+                        st.session_state.portfolio[idx]["Avg Cost"] = new_avg_cost
+                        st.success(f"Updated {stock['Ticker']}!")
+                        st.rerun()
+            if col3.button("Delete", key=f"delete-{idx}"):
+                st.session_state.portfolio.pop(idx)
+                # st.success(f"Deleted {stock['Ticker']}!")
+                st.rerun()
+
+    # Calculate and plot portfolio value
+    if st.session_state.portfolio:
+        st.markdown("### Portfolio Value Over Time")
+        portfolio_fig = go.Figure()
+        for stock in st.session_state.portfolio:
+            try:
+                stock_data = yf.Ticker(stock["Ticker"]).history(period=selected_period)
+                stock_data["Value"] = stock["Shares"] * stock_data["Close"]
+                portfolio_fig.add_trace(go.Scatter(
+                    x=stock_data.index,
+                    y=stock_data["Value"],
+                    mode='lines',
+                    name=f"{stock['Ticker']} Value",
+                    line=dict(width=2)
+                ))
+            except Exception as e:
+                st.error(f"Error fetching data for {stock['Ticker']}: {e}")
+
+        portfolio_fig.update_layout(
+            autosize=True,
+            height=chart_height,
+            xaxis_title="Date",
+            yaxis_title="Portfolio Value (USD)",
+            template="plotly_white",
+            xaxis=dict(showgrid=True),
+            yaxis=dict(showgrid=True),
+            hovermode="x unified",
+            margin=dict(l=20, r=20, t=50, b=20),
+            legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center")
+        )
+        st.plotly_chart(portfolio_fig, use_container_width=True)
