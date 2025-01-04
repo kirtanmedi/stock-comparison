@@ -1,0 +1,5 @@
+[theme]
+primaryColor = "#228B22"            # Blue accent color for UI elements
+backgroundColor = "#0E1117"         # Dark gray background
+secondaryBackgroundColor = "#262730" # Slightly lighter gray for sidebar
+textColor = "#FAFAFA"               # Off-white text
