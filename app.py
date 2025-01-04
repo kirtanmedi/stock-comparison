@@ -3,7 +3,10 @@ import streamlit as st
 import plotly.graph_objects as go
 
 # Set up Streamlit page configuration
-st.set_page_config(layout="wide", page_title="Stock Data Viewer")
+st.set_page_config(layout="wide", page_title="Stock Data Viewer", initial_sidebar_state="collapsed")
+
+# Manual toggle for testing mobile view
+is_mobile = st.sidebar.checkbox("Switch to Mobile View", value=False)
 
 # Load all tickers from a text file
 all_tickers = []
@@ -13,9 +16,6 @@ with open("utils/tickers.txt", "r") as file:
 
 # App title
 st.title("Stock Data: Toggle Between Price and Percentage Change")
-
-# Manual toggle for testing mobile view
-is_mobile = st.sidebar.checkbox("Switch to Mobile View", value=False)
 
 # Select tickers
 tickers = st.multiselect(
